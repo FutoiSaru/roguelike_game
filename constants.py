@@ -5,6 +5,12 @@ pygame.init()
 # Game sizes
 GAME_WIDTH = 800
 GAME_HEIGHT = 600
+CELL_WIDTH = 32
+CELL_HEIGHT = 32
+
+# Map variables
+MAP_WIDTH = 30
+MAP_HEIGHT = 30
 
 # Colour definitions
 COLOR_BLACK = (0, 0, 0)
@@ -16,3 +22,5 @@ COLOR_DEFAULT_BG = COLOR_GREY
 
 # Sprites
 SPR_PLAYER = pygame.image.load("data/sprites/python.png")
+SPR_WALL = pygame.image.load("data/sprites/wall.png")
+SPR_FLOOR = pygame.image.load("data/sprites/floor.jpg")
