@@ -14,11 +14,19 @@ class struc_Tile:
 
 # OBJECTS
 class obj_Actor:
-	def __init__(self, x, y, sprite):
+	def __init__(self, x, y, name_object, sprite, creature=None, ai=None):
 		# Map address
 		self.x = x
 		self.y = y
 		self.sprite = sprite
+		self.creature = creature
+		self.ai = ai
+
+		if creature:
+			creature.owner = self
+
+		if ai:
+			ai.owner = self
 
 	def draw(self):
 		SURFACE_MAIN.blit(self.sprite, (self.x * constants.CELL_WIDTH, self.y * constants.CELL_HEIGHT))
@@ -27,6 +35,25 @@ class obj_Actor:
 		if GAME_MAP[self.x + dx][self.y + dy].block_path is False:
 			self.x += dx
 			self.y += dy
+
+
+# COMPONENTS
+class com_Creature:
+	# Creatures have health, can damage other objects by attacking and can die
+	def __init__(self, name_instance, hp=10):
+		self.name_instance = name_instance
+		self.hp = hp
+
+
+# TODO class com_Item:
+
+# TODO class com_Container:
+
+# AI
+class ai_Test:
+	# Once per turn execute
+	def take_turn(self):
+		self.owner.move(-1, 0)
 
 
 # MAP
@@ -51,7 +78,8 @@ def draw_game():
 	draw_map(GAME_MAP)
 
 	# Draw character
-	PLAYER.draw()
+	for obj in GAME_OBJECTS:
+		obj.draw()
 
 	# Update display
 	pygame.display.flip()
@@ -72,40 +100,28 @@ def draw_map(map_to_draw):
 # Function to loop main game
 def game_main_loop():
 	game_quit = False
+	player_action = "no-action"
 
 	while not game_quit:
+		# Handle player input
+		player_action = game_handle_keys()
 
-		# Get player input
-		events_list = pygame.event.get()
+		if player_action == "QUIT":
+			game_quit = True
 
-		# Process input
-		for event in events_list:
-			# Quit game
-			if event.type == pygame.QUIT:
-				game_quit = True
-
-			if event.type == pygame.KEYDOWN:
-				if event.key == pygame.K_UP:
-					PLAYER.move(0, -1)
-				if event.key == pygame.K_DOWN:
-					PLAYER.move(0, 1)
-				if event.key == pygame.K_LEFT:
-					PLAYER.move(-1, 0)
-				if event.key == pygame.K_RIGHT:
-					PLAYER.move(1, 0)
+		elif player_action != "no-action":
+			for obj in GAME_OBJECTS:
+				if obj.ai:
+					obj.ai.take_turn()
 
 		# Draw game
 		draw_game()
-
-	# Quit the game
-	pygame.quit()
-	exit()
 
 
 # Function to initialize the game
 def game_initialize():
 
-	global SURFACE_MAIN, GAME_MAP, PLAYER
+	global SURFACE_MAIN, GAME_MAP, PLAYER, ENEMY, GAME_OBJECTS
 
 	# Initialize pygame
 	pygame.init()
@@ -115,7 +131,41 @@ def game_initialize():
 
 	GAME_MAP = map_create()
 
-	PLAYER = obj_Actor(0, 0, constants.SPR_PLAYER)
+	creature_com1 = com_Creature("Greg")
+	PLAYER = obj_Actor(0, 0, "Python", constants.SPR_PLAYER, creature=creature_com1)
+
+	creature_com2 = com_Creature("Jack")
+	ai_com = ai_Test()
+	ENEMY = obj_Actor(15, 15, "Crab", constants.SPR_ENEMY, creature=creature_com2, ai=ai_com)
+
+	GAME_OBJECTS = [PLAYER, ENEMY]
+
+
+def game_handle_keys():
+	# Get player input
+	events_list = pygame.event.get()
+
+	# Process input
+	for event in events_list:
+		# Quit game
+		if event.type == pygame.QUIT:
+			return "QUIT"
+
+		if event.type == pygame.KEYDOWN:
+			if event.key == pygame.K_UP:
+				PLAYER.move(0, -1)
+				return "Player moved"
+			if event.key == pygame.K_DOWN:
+				PLAYER.move(0, 1)
+				return "Player moved"
+			if event.key == pygame.K_LEFT:
+				PLAYER.move(-1, 0)
+				return "Player moved"
+			if event.key == pygame.K_RIGHT:
+				PLAYER.move(1, 0)
+				return "Player moved"
+
+	return "no-action"
 
 
 # Execute Game
