@@ -28,11 +28,29 @@ class obj_Actor:
 		if ai:
 			ai.owner = self
 
+	# Draw function
 	def draw(self):
 		SURFACE_MAIN.blit(self.sprite, (self.x * constants.CELL_WIDTH, self.y * constants.CELL_HEIGHT))
 
+	# Move function
 	def move(self, dx, dy):
-		if GAME_MAP[self.x + dx][self.y + dy].block_path is False:
+		tile_is_wall = GAME_MAP[self.x + dx][self.y + dy].block_path is True
+		target = None
+
+		for object in GAME_OBJECTS:
+			# Check if object is not, if it is where we want to move and whether it is a creature
+			if (object is not self and 
+				object.x == self.x + dx and 
+				object.y == self.y + dy and 
+				object.creature):
+				target = object
+				break
+
+		if target:
+			print self.creature.name_instance + " attacks " + target.creature.name_instance
+
+		# Move if tile isn't a wall and no target
+		if not tile_is_wall and target is None:
 			self.x += dx
 			self.y += dy
 
@@ -53,7 +71,7 @@ class com_Creature:
 class ai_Test:
 	# Once per turn execute
 	def take_turn(self):
-		self.owner.move(-1, 0)
+		self.owner.move(libtcod.random_get_int(0, -1, 1), libtcod.random_get_int(0, -1, 1))
 
 
 # MAP
@@ -63,6 +81,16 @@ def map_create():
 
 	new_map[10][10].block_path = True
 	new_map[10][15].block_path = True
+
+	# Create walls on top and bottom
+	for x in range(constants.MAP_WIDTH):
+		new_map[x][0].block_path = True
+		new_map[x][constants.MAP_HEIGHT - 1].block_path = True
+
+	# Create walls on left and right
+	for y in range(constants.MAP_HEIGHT):
+		new_map[0][y].block_path = True
+		new_map[constants.MAP_WIDTH - 1][y].block_path = True
 
 	return new_map
 
@@ -85,6 +113,7 @@ def draw_game():
 	pygame.display.flip()
 
 
+# Draw map
 def draw_map(map_to_draw):
 	for x in range(0, constants.MAP_WIDTH):
 		for y in range(0, constants.MAP_HEIGHT):
@@ -126,13 +155,12 @@ def game_initialize():
 	# Initialize pygame
 	pygame.init()
 
-	SURFACE_MAIN = pygame.display.set_mode(
-		(constants.GAME_WIDTH, constants.GAME_HEIGHT))
+	SURFACE_MAIN = pygame.display.set_mode((constants.MAP_WIDTH * constants.CELL_WIDTH, constants.MAP_HEIGHT * constants.CELL_HEIGHT))
 
 	GAME_MAP = map_create()
 
 	creature_com1 = com_Creature("Greg")
-	PLAYER = obj_Actor(0, 0, "Python", constants.SPR_PLAYER, creature=creature_com1)
+	PLAYER = obj_Actor(1, 1, "Python", constants.SPR_PLAYER, creature=creature_com1)
 
 	creature_com2 = com_Creature("Jack")
 	ai_com = ai_Test()
@@ -151,6 +179,7 @@ def game_handle_keys():
 		if event.type == pygame.QUIT:
 			return "QUIT"
 
+		# Get arrow key input and move accordingly
 		if event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_UP:
 				PLAYER.move(0, -1)
@@ -165,6 +194,7 @@ def game_handle_keys():
 				PLAYER.move(1, 0)
 				return "Player moved"
 
+	# Return no action if player didn't press a key
 	return "no-action"
 
 
