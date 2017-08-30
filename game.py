@@ -47,7 +47,8 @@ class obj_Actor:
 				break
 
 		if target:
-			print self.creature.name_instance + " attacks " + target.creature.name_instance
+			print self.creature.name_instance + " attacks " + target.creature.name_instance + " for 5 damage!"
+			target.creature.take_damage(5)
 
 		# Move if tile isn't a wall and no target
 		if not tile_is_wall and target is None:
@@ -58,20 +59,36 @@ class obj_Actor:
 # COMPONENTS
 class com_Creature:
 	# Creatures have health, can damage other objects by attacking and can die
-	def __init__(self, name_instance, hp=10):
+	def __init__(self, name_instance, hp=10, death_function=None):
 		self.name_instance = name_instance
+		self.maxhp = hp
 		self.hp = hp
+		self.death_function = death_function
 
+	def take_damage(self, damage):
+		self.hp -= damage
+		print self.name_instance + "'s health is " + str(self.hp) + "/" + str(self.maxhp)
+
+		if self.hp <= 0:
+			if self.death_function is not None:
+				self.death_function(self.owner)
 
 # TODO class com_Item:
 
 # TODO class com_Container:
+
 
 # AI
 class ai_Test:
 	# Once per turn execute
 	def take_turn(self):
 		self.owner.move(libtcod.random_get_int(0, -1, 1), libtcod.random_get_int(0, -1, 1))
+
+
+def death_monster(monster):
+		print monster.creature.name_instance + " is dead!"
+		monster.creature = None
+		monster.ai = None
 
 
 # MAP
@@ -162,7 +179,7 @@ def game_initialize():
 	creature_com1 = com_Creature("Greg")
 	PLAYER = obj_Actor(1, 1, "Python", constants.SPR_PLAYER, creature=creature_com1)
 
-	creature_com2 = com_Creature("Jack")
+	creature_com2 = com_Creature("Jack", death_function=death_monster)
 	ai_com = ai_Test()
 	ENEMY = obj_Actor(15, 15, "Crab", constants.SPR_ENEMY, creature=creature_com2, ai=ai_com)
 
