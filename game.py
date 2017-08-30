@@ -32,29 +32,6 @@ class obj_Actor:
 	def draw(self):
 		SURFACE_MAIN.blit(self.sprite, (self.x * constants.CELL_WIDTH, self.y * constants.CELL_HEIGHT))
 
-	# Move function
-	def move(self, dx, dy):
-		tile_is_wall = GAME_MAP[self.x + dx][self.y + dy].block_path is True
-		target = None
-
-		for object in GAME_OBJECTS:
-			# Check if object is not, if it is where we want to move and whether it is a creature
-			if (object is not self and 
-				object.x == self.x + dx and 
-				object.y == self.y + dy and 
-				object.creature):
-				target = object
-				break
-
-		if target:
-			print self.creature.name_instance + " attacks " + target.creature.name_instance + " for 5 damage!"
-			target.creature.take_damage(5)
-
-		# Move if tile isn't a wall and no target
-		if not tile_is_wall and target is None:
-			self.x += dx
-			self.y += dy
-
 
 # COMPONENTS
 class com_Creature:
@@ -64,6 +41,23 @@ class com_Creature:
 		self.maxhp = hp
 		self.hp = hp
 		self.death_function = death_function
+
+	# Move function
+	def move(self, dx, dy):
+		tile_is_wall = GAME_MAP[self.owner.x + dx][self.owner.y + dy].block_path is True
+		target = map_check_for_creatures(self.owner.x + dx, self.owner.y + dy, self.owner)
+
+		if target:
+			self.attack(target, 3)
+
+		# Move if tile isn't a wall and no target
+		if not tile_is_wall and target is None:
+			self.owner.x += dx
+			self.owner.y += dy
+
+	def attack(self, target, damage):
+		print self.name_instance + " attacks " + target.creature.name_instance + " for " + str(damage) + " damage!"
+		target.creature.take_damage(damage)
 
 	def take_damage(self, damage):
 		self.hp -= damage
@@ -82,7 +76,7 @@ class com_Creature:
 class ai_Test:
 	# Once per turn execute
 	def take_turn(self):
-		self.owner.move(libtcod.random_get_int(0, -1, 1), libtcod.random_get_int(0, -1, 1))
+		self.owner.creature.move(libtcod.random_get_int(0, -1, 1), libtcod.random_get_int(0, -1, 1))
 
 
 def death_monster(monster):
@@ -110,6 +104,33 @@ def map_create():
 		new_map[constants.MAP_WIDTH - 1][y].block_path = True
 
 	return new_map
+
+
+def map_check_for_creatures(x, y, exclude_object=None):
+	target = None
+
+	if exclude_object:
+		for object in GAME_OBJECTS:
+			# Check if object is not, if it is where we want to move and whether it is a creature
+			if (object is not exclude_object and 
+				object.x == x and 
+				object.y == y and 
+				object.creature):
+				target = object
+
+			if target:
+				return target
+
+	else:
+		for object in GAME_OBJECTS:
+			# Check if object is not, if it is where we want to move and whether it is a creature
+			if (object.x == x and 
+				object.y == y and 
+				object.creature):
+				target = object
+
+			if target:
+				return target	
 
 
 # DRAWING
@@ -199,16 +220,16 @@ def game_handle_keys():
 		# Get arrow key input and move accordingly
 		if event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_UP:
-				PLAYER.move(0, -1)
+				PLAYER.creature.move(0, -1)
 				return "Player moved"
 			if event.key == pygame.K_DOWN:
-				PLAYER.move(0, 1)
+				PLAYER.creature.move(0, 1)
 				return "Player moved"
 			if event.key == pygame.K_LEFT:
-				PLAYER.move(-1, 0)
+				PLAYER.creature.move(-1, 0)
 				return "Player moved"
 			if event.key == pygame.K_RIGHT:
-				PLAYER.move(1, 0)
+				PLAYER.creature.move(1, 0)
 				return "Player moved"
 
 	# Return no action if player didn't press a key
