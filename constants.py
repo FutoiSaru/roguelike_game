@@ -1,4 +1,5 @@
 import pygame
+import libtcodpy as libtcod
 
 pygame.init()
 
@@ -24,4 +25,11 @@ COLOR_DEFAULT_BG = COLOR_GREY
 SPR_PLAYER = pygame.image.load("data/sprites/python.png")
 SPR_ENEMY = pygame.image.load("data/sprites/crab.png")
 SPR_WALL = pygame.image.load("data/sprites/wall.jpg")
+SPR_WALL_UNSEEN = pygame.image.load("data/sprites/wallunseen.png")
 SPR_FLOOR = pygame.image.load("data/sprites/floor.jpg")
+SPR_FLOOR_UNSEEN = pygame.image.load("data/sprites/floorunseen.png")
+
+# FOV settings
+FOV_ALGO = libtcod.FOV_BASIC
+FOV_LIGHT_WALLS = True
+TORCH_RADIUS = 10

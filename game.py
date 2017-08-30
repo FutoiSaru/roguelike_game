@@ -10,6 +10,7 @@ import constants
 class struc_Tile:
 	def __init__(self, block_path):
 		self.block_path = block_path
+		self.explored = False
 
 
 # OBJECTS
@@ -30,7 +31,10 @@ class obj_Actor:
 
 	# Draw function
 	def draw(self):
-		SURFACE_MAIN.blit(self.sprite, (self.x * constants.CELL_WIDTH, self.y * constants.CELL_HEIGHT))
+		is_visible = libtcod.map_is_in_fov(FOV_MAP, self.x, self.y)
+
+		if is_visible:
+			SURFACE_MAIN.blit(self.sprite, (self.x * constants.CELL_WIDTH, self.y * constants.CELL_HEIGHT))
 
 
 # COMPONENTS
@@ -103,6 +107,8 @@ def map_create():
 		new_map[0][y].block_path = True
 		new_map[constants.MAP_WIDTH - 1][y].block_path = True
 
+	map_make_fov(new_map)
+
 	return new_map
 
 
@@ -133,6 +139,24 @@ def map_check_for_creatures(x, y, exclude_object=None):
 				return target	
 
 
+def map_make_fov(incoming_map):
+	global FOV_MAP
+
+	FOV_MAP = libtcod.map_new(constants.MAP_WIDTH, constants.MAP_HEIGHT)
+
+	for y in range(constants.MAP_HEIGHT):
+		for x in range(constants.MAP_WIDTH):
+			libtcod.map_set_properties(FOV_MAP, x, y, not incoming_map[x][y].block_path, not incoming_map[x][y].block_path)
+
+
+def map_calculate_fov():
+	global FOV_CALCULATE
+
+	if FOV_CALCULATE:
+		FOV_CALCULATE = False
+		libtcod.map_compute_fov(FOV_MAP, PLAYER.x, PLAYER.y, constants.TORCH_RADIUS, constants.FOV_LIGHT_WALLS, constants.FOV_ALGO)
+
+
 # DRAWING
 # Function to draw game
 def draw_game():
@@ -155,12 +179,25 @@ def draw_game():
 def draw_map(map_to_draw):
 	for x in range(0, constants.MAP_WIDTH):
 		for y in range(0, constants.MAP_HEIGHT):
-			# Draw wall
-			if map_to_draw[x][y].block_path is True:
-				SURFACE_MAIN.blit(constants.SPR_WALL, (x * constants.CELL_WIDTH, y * constants.CELL_HEIGHT))
-			# Draw floor
-			else:
-				SURFACE_MAIN.blit(constants.SPR_FLOOR, (x * constants.CELL_WIDTH, y * constants.CELL_HEIGHT))
+
+			is_visible = libtcod.map_is_in_fov(FOV_MAP, x, y)
+
+			if is_visible:
+				map_to_draw[x][y].explored = True
+				# Draw wall
+				if map_to_draw[x][y].block_path is True:
+					SURFACE_MAIN.blit(constants.SPR_WALL, (x * constants.CELL_WIDTH, y * constants.CELL_HEIGHT))
+				# Draw floor
+				else:
+					SURFACE_MAIN.blit(constants.SPR_FLOOR, (x * constants.CELL_WIDTH, y * constants.CELL_HEIGHT))
+
+			elif map_to_draw[x][y].explored:
+				# Draw wall
+				if map_to_draw[x][y].block_path is True:
+					SURFACE_MAIN.blit(constants.SPR_WALL_UNSEEN, (x * constants.CELL_WIDTH, y * constants.CELL_HEIGHT))
+				# Draw floor
+				else:
+					SURFACE_MAIN.blit(constants.SPR_FLOOR_UNSEEN, (x * constants.CELL_WIDTH, y * constants.CELL_HEIGHT))
 
 
 # GAME
@@ -172,6 +209,8 @@ def game_main_loop():
 	while not game_quit:
 		# Handle player input
 		player_action = game_handle_keys()
+
+		map_calculate_fov()
 
 		if player_action == "QUIT":
 			game_quit = True
@@ -188,7 +227,7 @@ def game_main_loop():
 # Function to initialize the game
 def game_initialize():
 
-	global SURFACE_MAIN, GAME_MAP, PLAYER, ENEMY, GAME_OBJECTS
+	global SURFACE_MAIN, GAME_MAP, PLAYER, ENEMY, GAME_OBJECTS, FOV_CALCULATE
 
 	# Initialize pygame
 	pygame.init()
@@ -196,6 +235,8 @@ def game_initialize():
 	SURFACE_MAIN = pygame.display.set_mode((constants.MAP_WIDTH * constants.CELL_WIDTH, constants.MAP_HEIGHT * constants.CELL_HEIGHT))
 
 	GAME_MAP = map_create()
+
+	FOV_CALCULATE = True
 
 	creature_com1 = com_Creature("Greg")
 	PLAYER = obj_Actor(1, 1, "Python", constants.SPR_PLAYER, creature=creature_com1)
@@ -208,6 +249,7 @@ def game_initialize():
 
 
 def game_handle_keys():
+	global FOV_CALCULATE
 	# Get player input
 	events_list = pygame.event.get()
 
@@ -221,15 +263,19 @@ def game_handle_keys():
 		if event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_UP:
 				PLAYER.creature.move(0, -1)
+				FOV_CALCULATE = True
 				return "Player moved"
 			if event.key == pygame.K_DOWN:
 				PLAYER.creature.move(0, 1)
+				FOV_CALCULATE = True
 				return "Player moved"
 			if event.key == pygame.K_LEFT:
 				PLAYER.creature.move(-1, 0)
+				FOV_CALCULATE = True
 				return "Player moved"
 			if event.key == pygame.K_RIGHT:
 				PLAYER.creature.move(1, 0)
+				FOV_CALCULATE = True
 				return "Player moved"
 
 	# Return no action if player didn't press a key
